@@ -80,18 +80,15 @@ def analyze_file(filepath):
 
         # Multi‑layer decoding
         decoded_results = multi_decode(s)
-        for decoded in decoded_results:
-            print(f"  {GREEN}[DECODED]{RESET} {decoded}")
-            detect_flags(decoded)
+for decoded in decoded_results:
+    print(f"  [DECODED] {decoded}")
+    detect_flags(decoded)
 
         # XOR brute‑force
         xor_results = xor_bruteforce(s)
-        for key, result in xor_results:
-            print(f"  {BLUE}[XOR key={key}]{RESET} {result}")
-            detect_flags(result)
-
-        # Direct flag detection
-        detect_flags(s)
+for key, result in xor_results:
+    print(f"  [XOR key={key}] {result}")
+    detect_flags(result)
 
 # ──────────────────────────────────────────────
 # Main Entry
@@ -121,3 +118,4 @@ def main():
 # ──────────────────────────────────────────────
 if __name__ == "__main__":
     main()
+
