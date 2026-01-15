@@ -89,11 +89,11 @@ def analyze_file(filepath):
                 detect_flags(decoded)
 
         # XOR only if likely encrypted
-        if entropy >= 4.5:
-            xor_results = xor_bruteforce(s)
-            for key, result in xor_results:
-                print(f"  {BLUE}[XOR key={key}]{RESET} {result}")
-                detect_flags(result)
+       if entropy >= 4.5 or looks_xor_encoded(s):
+    xor_results = xor_bruteforce(s)
+    for key, result in xor_results:
+        print(f"  {BLUE}[XOR key={key}]{RESET} {result}")
+        detect_flags(result)
 
 # ──────────────────────────────────────────────
 # Main Entry
@@ -123,3 +123,4 @@ def main():
 # ──────────────────────────────────────────────
 if __name__ == "__main__":
     main()
+
