@@ -1,5 +1,11 @@
 # flaghunter
 CTF reverse engineering helper with decoding, XOR brute-force and hash detection
+
+Author: Rashid  
+Version: v1.0.0  
+License: MIT  
+
+
 # 🧠 CTF Reverse Engineering Helper
 
 A Python-based helper tool for **CTF reverse engineering and binary analysis**.  
