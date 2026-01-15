@@ -56,6 +56,16 @@ def banner():
     print(YELLOW + "-" * 60 + RESET + "\n")
 
 # ──────────────────────────────────────────────
+# XOR Heuristic
+# ──────────────────────────────────────────────
+def looks_xor_encoded(s):
+    return (
+        len(s) >= 6 and
+        calculate_entropy(s) >= 2.8 and
+        any(c in "{}_" for c in s)
+    )
+
+# ──────────────────────────────────────────────
 # Core Analysis Logic
 # ──────────────────────────────────────────────
 def analyze_file(filepath):
@@ -78,22 +88,22 @@ def analyze_file(filepath):
         # Hash detection
         identify_hash(s)
 
-        # Always check direct flag
+        # Always check plain flags
         detect_flags(s)
 
-        # Decode only if looks encoded
+        # Decode if likely encoded
         if entropy >= 3.5:
             decoded_results = multi_decode(s)
             for decoded in decoded_results:
                 print(f"  {GREEN}[DECODED]{RESET} {decoded}")
                 detect_flags(decoded)
 
-        # XOR only if likely encrypted
-       if entropy >= 4.5 or looks_xor_encoded(s):
-    xor_results = xor_bruteforce(s)
-    for key, result in xor_results:
-        print(f"  {BLUE}[XOR key={key}]{RESET} {result}")
-        detect_flags(result)
+        # XOR if likely encrypted or XOR-like
+        if entropy >= 4.5 or looks_xor_encoded(s):
+            xor_results = xor_bruteforce(s)
+            for key, result in xor_results:
+                print(f"  {BLUE}[XOR key={key}]{RESET} {result}")
+                detect_flags(result)
 
 # ──────────────────────────────────────────────
 # Main Entry
@@ -123,4 +133,3 @@ def main():
 # ──────────────────────────────────────────────
 if __name__ == "__main__":
     main()
-
