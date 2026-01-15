@@ -23,3 +23,5 @@ hash identification, and flag detection**.
 ## ▶ Usage
 ```bash
 python3.13 flaghunter.py ctf.bin
+
+⚠️ Use responsibly. This tool is intended for educational and CTF purposes only.
