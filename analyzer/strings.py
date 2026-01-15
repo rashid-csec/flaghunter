@@ -14,4 +14,9 @@ def extract_strings(filepath, min_len=4):
             if len(current) >= min_len:
                 result.append(current)
             current = ""
+
+    # ✅ FIX: append last string if file ends with printable chars
+    if len(current) >= min_len:
+        result.append(current)
+
     return result
