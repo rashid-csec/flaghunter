@@ -17,7 +17,7 @@ VERSION = "v1.0.0"
 AUTHOR = "Rashid"
 
 # ──────────────────────────────────────────────
-# ANSI Colors (Cross‑platform)
+# ANSI Colors
 # ──────────────────────────────────────────────
 RED = "\033[91m"
 GREEN = "\033[92m"
@@ -70,33 +70,30 @@ def analyze_file(filepath):
     for s in strings:
         print(f"{BOLD}[STRING]{RESET} {s}")
 
-        # Entropy check
         entropy = calculate_entropy(s)
+
         if entropy > 4.5:
             print(f"  {YELLOW}⚠ High entropy detected (possible encoding/encryption){RESET}")
 
-        # Hash identification
+        # Hash detection
         identify_hash(s)
 
-        entropy = calculate_entropy(s)
+        # Always check direct flag
+        detect_flags(s)
 
-# Always try direct flag detection
-detect_flags(s)
+        # Decode only if looks encoded
+        if entropy >= 3.5:
+            decoded_results = multi_decode(s)
+            for decoded in decoded_results:
+                print(f"  {GREEN}[DECODED]{RESET} {decoded}")
+                detect_flags(decoded)
 
-# Decode only if entropy suggests encoding
-if entropy >= 3.5:
-    decoded_results = multi_decode(s)
-    for decoded in decoded_results:
-        print(f"  {GREEN}[DECODED]{RESET} {decoded}")
-        detect_flags(decoded)
-
-# XOR only if entropy is high (likely encrypted)
-if entropy >= 4.5:
-    xor_results = xor_bruteforce(s)
-    for key, result in xor_results:
-        print(f"  {BLUE}[XOR key={key}]{RESET} {result}")
-        detect_flags(result)
-
+        # XOR only if likely encrypted
+        if entropy >= 4.5:
+            xor_results = xor_bruteforce(s)
+            for key, result in xor_results:
+                print(f"  {BLUE}[XOR key={key}]{RESET} {result}")
+                detect_flags(result)
 
 # ──────────────────────────────────────────────
 # Main Entry
@@ -126,5 +123,3 @@ def main():
 # ──────────────────────────────────────────────
 if __name__ == "__main__":
     main()
-
-
