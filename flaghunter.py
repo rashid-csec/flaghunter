@@ -78,17 +78,25 @@ def analyze_file(filepath):
         # Hash identification
         identify_hash(s)
 
-        # Multi‑layer decoding
-        decoded_results = multi_decode(s)
-for decoded in decoded_results:
-    print(f"  [DECODED] {decoded}")
-    detect_flags(decoded)
+        entropy = calculate_entropy(s)
 
-        # XOR brute‑force
-        xor_results = xor_bruteforce(s)
-for key, result in xor_results:
-    print(f"  [XOR key={key}] {result}")
-    detect_flags(result)
+# Always try direct flag detection
+detect_flags(s)
+
+# Decode only if entropy suggests encoding
+if entropy >= 3.5:
+    decoded_results = multi_decode(s)
+    for decoded in decoded_results:
+        print(f"  {GREEN}[DECODED]{RESET} {decoded}")
+        detect_flags(decoded)
+
+# XOR only if entropy is high (likely encrypted)
+if entropy >= 4.5:
+    xor_results = xor_bruteforce(s)
+    for key, result in xor_results:
+        print(f"  {BLUE}[XOR key={key}]{RESET} {result}")
+        detect_flags(result)
+
 
 # ──────────────────────────────────────────────
 # Main Entry
@@ -118,4 +126,5 @@ def main():
 # ──────────────────────────────────────────────
 if __name__ == "__main__":
     main()
+
 
