@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import sys
-import re
 
 from analyzer.strings import extract_strings
 from analyzer.multidecode import multi_decode
@@ -9,26 +8,9 @@ from analyzer.xor_bruteforce import xor_bruteforce
 from analyzer.entropy import calculate_entropy
 from analyzer.flag_detector import detect_flags
 
-# ──────────────────────────────────────────────
-# Tool Info
-# ──────────────────────────────────────────────
-TOOL_NAME = "FlagHunter"
-VERSION = "v1.2.0"
-AUTHOR = "Rashid"
+# Formatting
+RED, GREEN, YELLOW, BLUE, CYAN, MAGENTA, RESET, BOLD = "\033[91m", "\033[92m", "\033[93m", "\033[94m", "\033[96m", "\033[95m", "\033[0m", "\033[1m"
 
-# ──────────────────────────────────────────────
-# ANSI Colors
-# ──────────────────────────────────────────────
-RED = "\033[91m"
-GREEN = "\033[92m"
-YELLOW = "\033[93m"
-BLUE = "\033[94m"
-CYAN = "\033[96m"
-MAGENTA = "\033[95m"
-RESET = "\033[0m"
-BOLD = "\033[1m"
-
-# ──────────────────────────────────────────────
 def banner():
     print(CYAN + BOLD + r"""
  ███████╗██╗      █████╗  ██████╗ ██╗  ██╗██╗   ██╗███╗   ██╗████████╗███████╗██████╗
@@ -38,94 +20,65 @@ def banner():
  ██║     ███████╗██║  ██║╚██████╔╝██║  ██║╚██████╔╝██║ ╚████║   ██║   ███████╗██║  ██║
  ╚═╝     ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝
 """ + RESET)
-    print(f"{GREEN}{BOLD}[+] {TOOL_NAME} {VERSION}{RESET}")
-    print(f"{BLUE}[+] Author : {AUTHOR}{RESET}")
-    print(f"{BLUE}[+] Purpose: CTF / Reverse Engineering Helper{RESET}\n")
+    print(f"{GREEN}{BOLD}[+] FlagHunter v1.2.0{RESET} | {BLUE}Author: Rashid{RESET}\n")
 
-# ──────────────────────────────────────────────
 def analyze_string(s, xor_mode=False, auto_mode=False):
-    """Analyze one extracted string"""
+    found_in_this_string = False
     entropy = calculate_entropy(s)
-    file_type = "Unknown"
-
-    # Entropy check → low/high
+    
     if entropy < 3:
-        file_type = "Plain text"
-        print(f"{GREEN}[TYPE] {file_type}{RESET}")
+        print(f"{GREEN}[TYPE] Plain text{RESET}")
     elif entropy < 4.5:
-        file_type = "Encoded text suspected"
-        print(f"{YELLOW}[TYPE] {file_type}{RESET}")
+        print(f"{YELLOW}[TYPE] Encoded text suspected{RESET}")
     else:
-        file_type = "High entropy (XOR/Encryption suspected)"
-        print(f"{RED}[TYPE] {file_type}{RESET}")
-        if not xor_mode and not auto_mode:
-            print(f"{MAGENTA}[WARNING] Possible XOR/encrypted content detected. Use -x to brute-force XOR{RESET}")
+        print(f"{RED}[TYPE] High entropy (XOR suspected){RESET}")
 
-    # Flag detection
-    detect_flags(s)
+    # 1. Direct detection
+    if detect_flags(s): found_in_this_string = True
 
-    # Base decoders
+    # 2. Multi-Decoder
     if entropy >= 3:
-        decoded_list = multi_decode(s)
-        for d in decoded_list:
+        for d in multi_decode(s):
             print(f"  {GREEN}[DECODED]{RESET} {d}")
-            detect_flags(d)
+            if detect_flags(d): found_in_this_string = True
 
-    # XOR brute-force
-    if xor_mode:
-        print(f"{BLUE}[XOR] Forced XOR brute-force (-x enabled){RESET}")
+    # 3. XOR Brute Force
+    if xor_mode or (auto_mode and entropy >= 4.5):
         for key, out in xor_bruteforce(s):
             print(f"  {BLUE}[XOR key={key}]{RESET} {out}")
-            detect_flags(out)
-    elif auto_mode and entropy >= 4.5:
-        print(f"{BLUE}[XOR] Auto XOR brute-force (high entropy){RESET}")
-        for key, out in xor_bruteforce(s):
-            print(f"  {BLUE}[XOR key={key}]{RESET} {out}")
-            detect_flags(out)
+            if detect_flags(out): found_in_this_string = True
 
-    return file_type, entropy
+    return found_in_this_string
 
-# ──────────────────────────────────────────────
 def analyze_file(filepath, xor_mode=False, auto_mode=False):
+    banner()
     print(f"{CYAN}[+] Analyzing file: {filepath}{RESET}\n")
-    strings = extract_strings(filepath)
-    summary = {
-        "plain_text": False,
-        "encoded": False,
-        "xor_suspected": False,
-        "flags_found": False
-    }
+    
+    try:
+        strings = extract_strings(filepath)
+    except FileNotFoundError:
+        print(f"{RED}[!] Error: File '{filepath}' not found.{RESET}")
+        return
+
+    summary = {"flags_found": False, "xor_found": False}
 
     for s in strings:
-        print(f"{BOLD}[STRING]{RESET} {s}")
-        ftype, entropy = analyze_string(s, xor_mode, auto_mode)
+        print(f"{BOLD}[STRING]{RESET} {s.strip()}")
+        if analyze_string(s, xor_mode, auto_mode):
+            summary["flags_found"] = True
+        print("-" * 30)
 
-        if ftype == "Plain text":
-            summary["plain_text"] = True
-        elif "Encoded" in ftype:
-            summary["encoded"] = True
-        elif "XOR" in ftype:
-            summary["xor_suspected"] = True
-
-    # Detection summary
     print(f"\n{MAGENTA}{BOLD}[DETECTION SUMMARY]{RESET}")
-    print(f"- Plain text: {'YES' if summary['plain_text'] else 'NO'}")
-    print(f"- Base64/ROT13 suspected: {'YES' if summary['encoded'] else 'NO'}")
-    print(f"- XOR suspected: {'YES' if summary['xor_suspected'] else 'NO'}")
-    print(f"- Flags detected: {'YES' if summary['flags_found'] else 'NO'}")
+    print(f"- Flags detected: {GREEN if summary['flags_found'] else RED}{'YES' if summary['flags_found'] else 'NO'}{RESET}")
 
-# ──────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description="CTF Reverse Engineering Helper")
     parser.add_argument("file", help="File to analyze")
     parser.add_argument("-x", "--xor", action="store_true", help="Enable XOR brute-force")
-    parser.add_argument("-a", "--auto", action="store_true", help="Automatic analysis mode")
-    parser.add_argument("-v", "--version", action="version", version=f"{TOOL_NAME} {VERSION}")
+    parser.add_argument("-a", "--auto", action="store_true", help="Automatic mode")
     args = parser.parse_args()
+    analyze_file(args.file, args.xor, args.auto)
 
-    banner()
-    analyze_file(args.file, xor_mode=args.xor, auto_mode=args.auto)
-
-# ──────────────────────────────────────────────
 if __name__ == "__main__":
     main()
+    
