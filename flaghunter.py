@@ -7,8 +7,9 @@ from analyzer.multidecode import multi_decode
 from analyzer.xor_bruteforce import xor_bruteforce
 from analyzer.entropy import calculate_entropy
 from analyzer.flag_detector import detect_flags
+from analyzer.hash_id import identify_hashes # Import the new feature
 
-# Formatting
+# ANSI Colors
 RED, GREEN, YELLOW, BLUE, CYAN, MAGENTA, RESET, BOLD = "\033[91m", "\033[92m", "\033[93m", "\033[94m", "\033[96m", "\033[95m", "\033[0m", "\033[1m"
 
 def banner():
@@ -23,32 +24,37 @@ def banner():
     print(f"{GREEN}{BOLD}[+] FlagHunter v1.2.0{RESET} | {BLUE}Author: Rashid{RESET}\n")
 
 def analyze_string(s, xor_mode=False, auto_mode=False):
-    found_in_this_string = False
-    entropy = calculate_entropy(s)
+    found_anything = False
+    ent = calculate_entropy(s)
     
-    if entropy < 3:
+    # Identify Hashes
+    if identify_hashes(s):
+        found_anything = True
+
+    # Entropy-based Type Hinting
+    if ent < 3.0:
         print(f"{GREEN}[TYPE] Plain text{RESET}")
-    elif entropy < 4.5:
-        print(f"{YELLOW}[TYPE] Encoded text suspected{RESET}")
+    elif ent < 4.5:
+        print(f"{YELLOW}[TYPE] Encoded/Compressed suspected{RESET}")
     else:
-        print(f"{RED}[TYPE] High entropy (XOR suspected){RESET}")
+        print(f"{RED}[TYPE] High entropy (Encrypted suspected){RESET}")
 
-    # 1. Direct detection
-    if detect_flags(s): found_in_this_string = True
+    # 1. Direct Flag Check
+    if detect_flags(s): found_anything = True
 
-    # 2. Multi-Decoder
-    if entropy >= 3:
+    # 2. Multi-Layer Decoding
+    if ent >= 3.0:
         for d in multi_decode(s):
             print(f"  {GREEN}[DECODED]{RESET} {d}")
-            if detect_flags(d): found_in_this_string = True
+            if detect_flags(d): found_anything = True
 
-    # 3. XOR Brute Force
-    if xor_mode or (auto_mode and entropy >= 4.5):
+    # 3. XOR Brute-force
+    if xor_mode or (auto_mode and ent >= 4.5):
         for key, out in xor_bruteforce(s):
             print(f"  {BLUE}[XOR key={key}]{RESET} {out}")
-            if detect_flags(out): found_in_this_string = True
+            if detect_flags(out): found_anything = True
 
-    return found_in_this_string
+    return found_anything
 
 def analyze_file(filepath, xor_mode=False, auto_mode=False):
     banner()
@@ -56,26 +62,26 @@ def analyze_file(filepath, xor_mode=False, auto_mode=False):
     
     try:
         strings = extract_strings(filepath)
-    except FileNotFoundError:
-        print(f"{RED}[!] Error: File '{filepath}' not found.{RESET}")
+    except Exception as e:
+        print(f"{RED}[!] Error reading file: {e}{RESET}")
         return
 
-    summary = {"flags_found": False, "xor_found": False}
-
+    flags_found = False
     for s in strings:
-        print(f"{BOLD}[STRING]{RESET} {s.strip()}")
+        print(f"{BOLD}[STRING]{RESET} {s}")
         if analyze_string(s, xor_mode, auto_mode):
-            summary["flags_found"] = True
-        print("-" * 30)
+            flags_found = True
+        print(f"{CYAN}" + "-"*40 + f"{RESET}")
 
     print(f"\n{MAGENTA}{BOLD}[DETECTION SUMMARY]{RESET}")
-    print(f"- Flags detected: {GREEN if summary['flags_found'] else RED}{'YES' if summary['flags_found'] else 'NO'}{RESET}")
+    status_color = GREEN if flags_found else RED
+    print(f"- Flags/Hashes Detected: {status_color}{'YES' if flags_found else 'NO'}{RESET}")
 
 def main():
     parser = argparse.ArgumentParser(description="CTF Reverse Engineering Helper")
     parser.add_argument("file", help="File to analyze")
-    parser.add_argument("-x", "--xor", action="store_true", help="Enable XOR brute-force")
-    parser.add_argument("-a", "--auto", action="store_true", help="Automatic mode")
+    parser.add_argument("-x", "--xor", action="store_true", help="Forced XOR brute-force")
+    parser.add_argument("-a", "--auto", action="store_true", help="Automatic analysis mode")
     args = parser.parse_args()
     analyze_file(args.file, args.xor, args.auto)
 
