@@ -3,13 +3,14 @@ import argparse
 import sys
 import re
 
-# Internal imports
+# Absolute imports for package compatibility
 from analyzer.strings import extract_strings
 from analyzer.multidecode import multi_decode
 from analyzer.xor_bruteforce import xor_bruteforce
 from analyzer.entropy import calculate_entropy
 from analyzer.flag_detector import detect_flags
 from analyzer.hash_id import identify_hashes 
+
 
 # ──────────────────────────────────────────────
 # ANSI Colors & Formatting
@@ -135,4 +136,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print(f"\n{RED}[!] Analysis stopped by user.{RESET}")
         sys.exit(0)
+
 
