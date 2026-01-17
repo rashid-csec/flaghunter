@@ -33,7 +33,7 @@ def banner():
  ██║     ███████╗██║  ██║╚██████╔╝██║  ██║╚██████╔╝██║ ╚████║   ██║   ███████╗██║  ██║
  ╚═╝     ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝
 """ + RESET)
-    print(f"{GREEN}{BOLD}[+] FlagHunter v1.2.0{RESET} | {BLUE}Author: Rashid{RESET}\n")
+    print(f"{GREEN}{BOLD}[+] FlagHunter v1.5.0{RESET} | {BLUE}Author: Rashid{RESET}\n")
 
 # ──────────────────────────────────────────────
 def analyze_string(s, xor_mode=False, auto_mode=False):
@@ -135,3 +135,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print(f"\n{RED}[!] Analysis stopped by user.{RESET}")
         sys.exit(0)
+
