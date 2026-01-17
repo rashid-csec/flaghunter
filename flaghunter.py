@@ -41,7 +41,7 @@ def analyze_string(s, xor_mode=False, auto_mode=False):
     found_anything = False
     ent = calculate_entropy(s)
     
-    # 1. Identify Hashes (MD5, SHA, etc.)
+    # 1. Identify Hashes
     if identify_hashes(s):
         found_anything = True
 
@@ -53,11 +53,11 @@ def analyze_string(s, xor_mode=False, auto_mode=False):
     else:
         print(f"{RED}[TYPE] High entropy (Encrypted suspected){RESET}")
 
-    # 3. Direct Flag Check (e.g., flag{...})
+    # 3. Direct Flag Check
     if detect_flags(s): 
         found_anything = True
 
-    # 4. Multi-Layer Decoding (Base64, Hex, URL, ROT13)
+    # 4. Multi-Layer Decoding (BFS approach)
     if ent >= 3.0:
         decoded_list = multi_decode(s)
         for d in decoded_list:
@@ -65,26 +65,26 @@ def analyze_string(s, xor_mode=False, auto_mode=False):
             if detect_flags(d): 
                 found_anything = True
 
-    # 5. XOR Brute-force (With High-Sensitivity Highlight for fragments)
+    # 5. XOR Brute-force (Enhanced to find flags inside junk strings)
     if xor_mode or (auto_mode and ent >= 4.5):
-        # We search for common CTF keywords to catch fragments like 'akf' -> 'flag'
-        keywords = r"flag|ctf|htb|pico|pass|key"
+        keywords = ["flag", "ctf", "htb", "pico"]
         
         for key, out in xor_bruteforce(s):
-            # A: Check for official flag format in XOR output
-            if detect_flags(out):
-                print(f"  {MAGENTA}{BOLD}[XOR SUCCESS! Key={key}]{RESET} {YELLOW}{out}{RESET}")
-                found_anything = True
+            lower_out = out.lower()
+            # Catch fragments like 'DATA_START:flag'
+            if any(k in lower_out for k in keywords):
+                print(f"  {MAGENTA}{BOLD}[XOR HIT! Key={key}]{RESET} {YELLOW}{out}{RESET}")
+                
+                # Check if a strict flag format exists inside the result
+                if detect_flags(out):
+                    found_anything = True
+                else:
+                    # Even a keyword without braces is a positive find
+                    found_anything = True
             
-            # B: Check for fragment keywords (to catch 'flag' without braces)
-            elif re.search(keywords, out, re.IGNORECASE):
-                print(f"  {MAGENTA}{BOLD}[XOR POTENTIAL! Key={key}]{RESET} {YELLOW}{out}{RESET}")
-                found_anything = True
-            
-            # C: Standard printable XOR output
-            else:
-                # Only print if not totally empty
-                if out.strip():
+            # Show other printable results only if XOR mode is forced
+            elif xor_mode:
+                if out.strip() and len(out) > 3:
                     print(f"  {BLUE}[XOR key={key}]{RESET} {out}")
 
     return found_anything
@@ -103,26 +103,26 @@ def analyze_file(filepath, xor_mode=False, auto_mode=False):
     final_flag_status = False
     
     for s in strings:
+        # Avoid analyzing very short junk strings
+        if len(s.strip()) < 3: continue
+            
         print(f"{BOLD}[STRING]{RESET} {s}")
-        # Run analysis and update the global flag status
         if analyze_string(s, xor_mode, auto_mode):
             final_flag_status = True
             
         print(f"{CYAN}" + "-"*40 + f"{RESET}")
 
-    # ──────────────────────────────────────────────
     # Final Summary
-    # ──────────────────────────────────────────────
     print(f"\n{MAGENTA}{BOLD}[DETECTION SUMMARY]{RESET}")
     status_color = GREEN if final_flag_status else RED
     print(f"- Flags/Hashes/Fragments Detected: {status_color}{'YES' if final_flag_status else 'NO'}{RESET}")
 
 # ──────────────────────────────────────────────
 def main():
-    parser = argparse.ArgumentParser(description="FlagHunter: CTF Reverse Engineering & Static Analysis Tool")
+    parser = argparse.ArgumentParser(description="FlagHunter: Static Analysis Tool")
     parser.add_argument("file", help="File to analyze")
-    parser.add_argument("-x", "--xor", action="store_true", help="Force XOR brute-force on all strings")
-    parser.add_argument("-a", "--auto", action="store_true", help="Auto-mode: XOR brute-force on high-entropy strings")
+    parser.add_argument("-x", "--xor", action="store_true", help="Forced XOR brute-force")
+    parser.add_argument("-a", "--auto", action="store_true", help="Automatic high-entropy XOR mode")
     args = parser.parse_args()
 
     analyze_file(args.file, xor_mode=args.xor, auto_mode=args.auto)
@@ -131,5 +131,5 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print(f"\n{RED}[!] Analysis interrupted by user.{RESET}")
+        print(f"\n{RED}[!] Analysis stopped by user.{RESET}")
         sys.exit(0)
