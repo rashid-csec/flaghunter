@@ -1,33 +1,26 @@
 import re
-import string
 
 def extract_strings(filepath, min_len=4):
     result = []
-    # We use a set of printable bytes for much faster lookup
-    printable_bytes = set(string.printable.encode('ascii'))
-    
-    with open(filepath, "rb") as f:
-        data = f.read()
+    try:
+        with open(filepath, "rb") as f:
+            data = f.read()
+        
+        # Find all printable sequences
+        pattern = rb"[ -~]{" + str(min_len).encode() + rb",}"
+        raw_strings = re.findall(pattern, data)
 
-    current = bytearray()
-    for b in data:
-        if b in printable_bytes:
-            current.append(b)
-        else:
-            if len(current) >= min_len:
-                try:
-                    # Decode and split by whitespace/newlines to prevent giant blobs
-                    decoded = current.decode('ascii', errors='ignore')
-                    # Split into sub-strings if multiple are bunched together
-                    parts = re.split(r'[\s\x00-\x1f]+', decoded)
-                    for p in parts:
-                        if len(p) >= min_len:
-                            result.append(p.strip())
-                except:
-                    pass
-                current = bytearray()
-    
-    if len(current) >= min_len:
-        result.append(current.decode('ascii', errors='ignore').strip())
-
+        for s in raw_strings:
+            decoded = s.decode('ascii', errors='ignore')
+            
+            # SPLIT on common separators like : | and whitespace
+            # This isolates the actual XOR data from labels
+            parts = re.split(r'[:|,\s]+', decoded)
+            
+            for p in parts:
+                if len(p.strip()) >= min_len:
+                    result.append(p.strip())
+    except Exception as e:
+        pass
+        
     return result
