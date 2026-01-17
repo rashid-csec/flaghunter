@@ -12,16 +12,17 @@ from analyzer.flag_detector import detect_flags
 from analyzer.hash_id import identify_hashes 
 
 # ──────────────────────────────────────────────
-# ANSI Colors & Formatting
+# ANSI Colors & Highlighting
 # ──────────────────────────────────────────────
-RED     = "\033[91m"
-GREEN   = "\033[92m"
-YELLOW  = "\033[93m"
-BLUE    = "\033[94m"
-MAGENTA = "\033[95m"
-CYAN    = "\033[96m"
-RESET   = "\033[0m"
-BOLD    = "\033[1m"
+RED          = "\033[91m"
+GREEN        = "\033[92m"
+YELLOW       = "\033[93m"
+BLUE         = "\033[94m"
+MAGENTA      = "\033[95m"
+CYAN         = "\033[96m"
+RESET        = "\033[0m"
+BOLD         = "\033[1m"
+BG_RED_WHITE = "\033[41m\033[37m" # Red Background, White Text
 
 # ──────────────────────────────────────────────
 def banner():
@@ -33,11 +34,11 @@ def banner():
  ██║     ███████╗██║  ██║╚██████╔╝██║  ██║╚██████╔╝██║ ╚████║   ██║   ███████╗██║  ██║
  ╚═╝     ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝
 """ + RESET)
-    print(f"{GREEN}{BOLD}[+] FlagHunter v1.2.0{RESET} | {BLUE}Author: Rashid{RESET}\n")
+    print(f"{GREEN}{BOLD}[+] FlagHunter v1.4.0 (Red-Alert Edition){RESET} | {BLUE}Author: Rashid{RESET}\n")
 
 # ──────────────────────────────────────────────
 def analyze_string(s, xor_mode=False, auto_mode=False):
-    """Core analysis logic for a single string"""
+    """Core analysis logic with Recursive Deep Scanning and High-Visibility Alerts"""
     found_anything = False
     ent = calculate_entropy(s)
     
@@ -53,41 +54,43 @@ def analyze_string(s, xor_mode=False, auto_mode=False):
     else:
         print(f"{RED}[TYPE] High entropy (Encrypted suspected){RESET}")
 
-    # 3. Direct Flag Check
+    # 3. Direct Flag Check & Normal Decoding
     if detect_flags(s): 
+        print(f"  {BG_RED_WHITE}{BOLD} 🚩 FLAG DETECTED: {s} {RESET}")
         found_anything = True
-
-    # 4. Multi-Layer Decoding (BFS approach)
-    if ent >= 3.0:
-        decoded_list = multi_decode(s)
-        for d in decoded_list:
+    
+    # Check for encoded layers (Base64, Hex, etc.)
+    for d in multi_decode(s):
+        if d.strip() != s.strip():
             print(f"  {GREEN}[DECODED]{RESET} {d}")
             if detect_flags(d): 
+                print(f"  {BG_RED_WHITE}{BOLD} 🚩 FLAG DETECTED IN DECODE: {d} {RESET}")
                 found_anything = True
 
-    # 5. XOR Brute-force (Enhanced to find flags inside junk strings)
-    # Trigger if forced (-x) OR if high entropy AND auto mode (-a)
+    # 4. XOR Brute-force + Recursive Deep Scan (XOR -> Base64 -> Flag)
     if xor_mode or (auto_mode and ent >= 4.0):
-        keywords = ["flag", "ctf", "htb", "pico"]
-        
-        # Pull potential XOR results
+        keywords = ["flag", "ctf", "htb", "pico", "{"]
         results = xor_bruteforce(s)
         
-        for key, out in results:
-            lower_out = out.lower()
-            # Catch fragments even if the full flag structure isn't there yet
-            if any(k in lower_out for k in keywords):
-                print(f"  {MAGENTA}{BOLD}✨ [XOR MATCH! Key={key}] {YELLOW}{out}{RESET}")
-                found_anything = True
-                
-                # Check if a strict flag format (flag{...}) exists inside the result
-                if detect_flags(out):
-                    pass # detect_flags already prints the success message
+        for key, xor_out in results:
+            # --- DEEP SCAN LOGIC ---
+            # Run the XOR result back through the decoder
+            nested_decodes = multi_decode(xor_out)
+            for nd in nested_decodes:
+                if nd.strip() != xor_out.strip():
+                    if detect_flags(nd):
+                        print(f"  {BG_RED_WHITE}{BOLD} 🔥 DEEP MATCH! XOR(Key {key}) -> DECODED -> {nd} {RESET}")
+                        found_anything = True
             
-            # Show other printable results ONLY if XOR mode is manually forced (-x)
+            # Highlight XOR results that look like flags or fragments
+            if any(k in xor_out.lower() for k in keywords):
+                print(f"  {RED}{BOLD}✨ [XOR MATCH! Key={key}] {xor_out}{RESET}")
+                found_anything = True
+            
+            # Standard XOR output if forced
             elif xor_mode:
-                if out.strip() and len(out) > 3:
-                    print(f"  {BLUE}[XOR key={key}]{RESET} {out}")
+                if xor_out.strip() and len(xor_out) > 3:
+                    print(f"  {BLUE}[XOR key={key}]{RESET} {xor_out}")
 
     return found_anything
 
@@ -105,7 +108,6 @@ def analyze_file(filepath, xor_mode=False, auto_mode=False):
     final_flag_status = False
     
     for s in strings:
-        # Filter out very small fragments that cause noise
         if len(s.strip()) < 3: continue
             
         print(f"{BOLD}[STRING]{RESET} {s}")
@@ -116,15 +118,15 @@ def analyze_file(filepath, xor_mode=False, auto_mode=False):
 
     # Final Summary
     print(f"\n{MAGENTA}{BOLD}[DETECTION SUMMARY]{RESET}")
-    status_color = GREEN if final_flag_status else RED
-    print(f"- Flags/Hashes/Fragments Detected: {status_color}{'YES' if final_flag_status else 'NO'}{RESET}")
+    status_color = BG_RED_WHITE if final_flag_status else RED
+    print(f"- Flags/Hashes/Fragments Detected: {status_color}{BOLD} {'YES' if final_flag_status else 'NO'} {RESET}")
 
 # ──────────────────────────────────────────────
 def main():
-    parser = argparse.ArgumentParser(description="FlagHunter: Static Analysis Tool")
+    parser = argparse.ArgumentParser(description="FlagHunter: Advanced CTF Static Analysis")
     parser.add_argument("file", help="File to analyze")
-    parser.add_argument("-x", "--xor", action="store_true", help="Forced XOR brute-force on all strings")
-    parser.add_argument("-a", "--auto", action="store_true", help="Automatic high-entropy XOR mode")
+    parser.add_argument("-x", "--xor", action="store_true", help="Force XOR brute-force")
+    parser.add_argument("-a", "--auto", action="store_true", help="Auto-XOR on high entropy")
     args = parser.parse_args()
 
     analyze_file(args.file, xor_mode=args.xor, auto_mode=args.auto)
@@ -133,5 +135,5 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print(f"\n{RED}[!] Analysis stopped by user.{RESET}")
+        print(f"\n{RED}[!] Interrupted.{RESET}")
         sys.exit(0)
