@@ -66,23 +66,25 @@ def analyze_string(s, xor_mode=False, auto_mode=False):
                 found_anything = True
 
     # 5. XOR Brute-force (Enhanced to find flags inside junk strings)
-    if xor_mode or (auto_mode and ent >= 4.5):
+    # Trigger if forced (-x) OR if high entropy AND auto mode (-a)
+    if xor_mode or (auto_mode and ent >= 4.0):
         keywords = ["flag", "ctf", "htb", "pico"]
         
-        for key, out in xor_bruteforce(s):
+        # Pull potential XOR results
+        results = xor_bruteforce(s)
+        
+        for key, out in results:
             lower_out = out.lower()
-            # Catch fragments like 'DATA_START:flag'
+            # Catch fragments even if the full flag structure isn't there yet
             if any(k in lower_out for k in keywords):
-                print(f"  {MAGENTA}{BOLD}[XOR HIT! Key={key}]{RESET} {YELLOW}{out}{RESET}")
+                print(f"  {MAGENTA}{BOLD}✨ [XOR MATCH! Key={key}] {YELLOW}{out}{RESET}")
+                found_anything = True
                 
-                # Check if a strict flag format exists inside the result
+                # Check if a strict flag format (flag{...}) exists inside the result
                 if detect_flags(out):
-                    found_anything = True
-                else:
-                    # Even a keyword without braces is a positive find
-                    found_anything = True
+                    pass # detect_flags already prints the success message
             
-            # Show other printable results only if XOR mode is forced
+            # Show other printable results ONLY if XOR mode is manually forced (-x)
             elif xor_mode:
                 if out.strip() and len(out) > 3:
                     print(f"  {BLUE}[XOR key={key}]{RESET} {out}")
@@ -103,7 +105,7 @@ def analyze_file(filepath, xor_mode=False, auto_mode=False):
     final_flag_status = False
     
     for s in strings:
-        # Avoid analyzing very short junk strings
+        # Filter out very small fragments that cause noise
         if len(s.strip()) < 3: continue
             
         print(f"{BOLD}[STRING]{RESET} {s}")
@@ -121,7 +123,7 @@ def analyze_file(filepath, xor_mode=False, auto_mode=False):
 def main():
     parser = argparse.ArgumentParser(description="FlagHunter: Static Analysis Tool")
     parser.add_argument("file", help="File to analyze")
-    parser.add_argument("-x", "--xor", action="store_true", help="Forced XOR brute-force")
+    parser.add_argument("-x", "--xor", action="store_true", help="Forced XOR brute-force on all strings")
     parser.add_argument("-a", "--auto", action="store_true", help="Automatic high-entropy XOR mode")
     args = parser.parse_args()
 
