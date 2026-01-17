@@ -31,4 +31,3 @@ def extract_strings(filepath, min_len=4):
         result.append(current.decode('ascii', errors='ignore').strip())
 
     return result
-    
