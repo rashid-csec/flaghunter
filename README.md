@@ -1,33 +1,26 @@
-# flaghunter
-CTF reverse engineering helper with decoding, XOR brute-force and hash detection
-
-Author: Rashid  
-Version: v1.0.0  
-License: MIT  
 
 
-# 🧠 CTF Reverse Engineering Helper
+# FlagHunter v1.5.0 🚩
 
-A Python-based helper tool for **CTF reverse engineering and binary analysis**.  
-It extracts strings from binaries and applies **automatic decoding, XOR brute-force,
-hash identification, and flag detection**.
+**FlagHunter** is a high-performance static analysis tool built for CTF players and security researchers. Unlike standard `strings` utilities, FlagHunter is designed to "peel the onion" of nested obfuscation, uncovering flags hidden behind layers of XOR, Base64, Hex, and ROT13.
 
----
 
-## 🚀 Features
 
-- 🔍 Binary string extraction
-- 🔁 Multi-layer decoding (Base64, Hex, URL, ROT13)
-- 🔓 XOR brute-force with smart filtering
-- 🔑 Hash identification (MD5, SHA1, SHA256)
-- ⚠ CrackStation & Hashcat guidance
-- 📊 Entropy-based encryption detection
-- 🚩 Extended CTF flag detection
-- 🧩 Partial flag reconstruction (optional)
+## 🚀 Core Capabilities
 
----
-## ▶ Usage
+* **Recursive Deep Scan:** Automatically detects and decodes nested layers (e.g., `XOR(Base64(Flag))`).
+* **Smart XOR Brute-force:** Tests all 255 keys and uses keyword heuristics to isolate human-readable results.
+* **Entropy Triggering:** High-entropy strings (random-looking data) automatically trigger deeper analysis.
+* **Hash Analysis:** Identifies MD5/SHA256 hashes and provides instant `hashcat` syntax and lookup links.
+* **Red-Alert Visualization:** High-visibility terminal highlighting for confirmed flag hits.
+* **Advanced Tokenization:** Intelligently splits strings by delimiters (`:`, `|`, `,`) to find data hidden in logs or code.
+
+## 🛠 Installation
+
 ```bash
-python3.13 flaghunter.py ctf.bin
+# Clone the repository
+git clone [https://github.com/yourusername/flaghunter.git](https://github.com/yourusername/flaghunter.git)
+cd flaghunter
 
-⚠️ Use responsibly. This tool is intended for educational and CTF purposes only.
+# Ensure you have Python 3 installed
+python3 --version
